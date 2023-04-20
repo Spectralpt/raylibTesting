@@ -134,8 +134,8 @@ int main(void)
   SetTargetFPS(60);
   int framesCounter = 0;
 
-  Texture2D cube = LoadTexture("/home/miguel/pictures/Sprites/GooseGame/Sprite-0001.png");
-  Texture2D water = LoadTexture("/home/miguel/pictures/Sprites/GooseGame/Sprite-0003.png");
+  Texture2D cube = LoadTexture("sprites/Sprite-0001.png");
+  Texture2D water = LoadTexture("sprites/Sprite-0003.png");
   // Texture2D cube = LoadTexture("../cubes/cube2.png");
 
 
