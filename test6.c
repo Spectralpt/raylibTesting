@@ -66,17 +66,17 @@ bool polyPoint(Polygon polygon, float pointX, float pointY) {
   return collision;
 }
 
-void drawCube(Texture2D cube, Texture2D water , int frames){
+void drawCube(Texture2D cube, Texture2D water , int frames, int heightMutationMap[9][9]){
 
-  int map [9][9] = {{0,0,0,1,1,1,0,0,0},
-                    {0,0,0,1,1,1,0,0,0},
-                    {0,0,0,2,2,1,0,0,0},
-                    {0,0,0,2,2,2,0,0,0},
-                    {0,0,0,2,2,2,0,0,0},
-                    {0,0,0,2,2,2,0,0,0},
-                    {0,1,1,1,2,2,2,1,0},
-                    {0,1,1,1,2,1,1,1,0},
-                    {0,1,1,1,0,1,1,1,0}};
+  int map [9][9] = {{1,1,1,1,1,1,1,1,1},
+                    {0,0,1,1,1,1,0,0,1},
+                    {0,0,1,2,2,1,1,0,1},
+                    {0,0,1,2,2,2,2,2,1},
+                    {0,0,1,2,2,2,2,1,1},
+                    {0,0,1,2,2,2,1,0,0},
+                    {1,1,1,1,2,2,2,1,0},
+                    {1,1,1,1,2,1,1,1,0},
+                    {1,1,1,1,1,1,1,1,1}};
 
   const int screenWidth = 800;
   const int screenHeight = 450;
@@ -85,8 +85,7 @@ void drawCube(Texture2D cube, Texture2D water , int frames){
   int mapWidth = 9;
 
   int tileScaleFactor = 2;
-  int heightMutation;
-
+  
   Vector2 x = {0.5 * cube.width * tileScaleFactor, 0.25 * cube.height * tileScaleFactor};
   Vector2 y = {-0.5 * cube.width * tileScaleFactor, 0.25 * cube.height * tileScaleFactor};
 
@@ -98,10 +97,8 @@ void drawCube(Texture2D cube, Texture2D water , int frames){
   for (int mapX = 0; mapX < mapHeight; mapX++) {
     for (int mapY = 0; mapY < mapWidth ; mapY++) {
 
-      heightMutation = rand() % 3;
-
       int x = (mapX* 0.5 * cube.width + mapY * (-0.5) * cube.width - cube.width/2) * tileScaleFactor + screenWidth/2;
-      int y = (mapX* 0.25 * cube.width + mapY * 0.25 * cube.width) * tileScaleFactor + heightMutation;
+      int y = (mapX* 0.25 * cube.width + mapY * 0.25 * cube.width) * tileScaleFactor + heightMutationMap[mapX][mapY] * tileScaleFactor;
 
       Vector2 waterLevel = {0 ,5};
 
@@ -141,15 +138,25 @@ int main(void)
   SetTargetFPS(60);
   int framesCounter = 0;
 
-  Texture2D cube = LoadTexture("sprites/Sprite-0001.png");
+  Texture2D cube = LoadTexture("sprites/Sprite-0005.png");
   Texture2D water = LoadTexture("sprites/Sprite-0003.png");
   // Texture2D cube = LoadTexture("../cubes/cube2.png");
+  
+  int heightMutationMap[9][9];
+  int heightMutation;
 
+
+  
+  for(int i = 0; i < 9; i++){
+      for(int j = 0; j < 9; j++){
+          heightMutationMap[i][j] = rand() % 4;
+      }
+  }
 
   while (!WindowShouldClose()) {
     ClearBackground((Color){34, 32, 52, 255});
     bool mouseButton = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    drawCube(cube, water, framesCounter);
+    drawCube(cube, water, framesCounter, heightMutationMap);
     if(IsKeyPressed(KEY_E)){
       CloseWindow();
     }
