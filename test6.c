@@ -1,5 +1,7 @@
 #include "raylib.h"
 #include "raymath.h"
+#include <time.h>
+#include <stdlib.h>
 
 typedef struct polygon{
   Vector2 vertices[4];
@@ -83,6 +85,7 @@ void drawCube(Texture2D cube, Texture2D water , int frames){
   int mapWidth = 9;
 
   int tileScaleFactor = 2;
+  int heightMutation;
 
   Vector2 x = {0.5 * cube.width * tileScaleFactor, 0.25 * cube.height * tileScaleFactor};
   Vector2 y = {-0.5 * cube.width * tileScaleFactor, 0.25 * cube.height * tileScaleFactor};
@@ -95,8 +98,10 @@ void drawCube(Texture2D cube, Texture2D water , int frames){
   for (int mapX = 0; mapX < mapHeight; mapX++) {
     for (int mapY = 0; mapY < mapWidth ; mapY++) {
 
+      heightMutation = rand() % 3;
+
       int x = (mapX* 0.5 * cube.width + mapY * (-0.5) * cube.width - cube.width/2) * tileScaleFactor + screenWidth/2;
-      int y = (mapX* 0.25 * cube.width + mapY * 0.25 * cube.width) * tileScaleFactor;
+      int y = (mapX* 0.25 * cube.width + mapY * 0.25 * cube.width) * tileScaleFactor + heightMutation;
 
       Vector2 waterLevel = {0 ,5};
 
@@ -129,6 +134,8 @@ int main(void)
 {
   const int screenWidth = 800;
   const int screenHeight = 450;
+
+  srand(time(NULL));
 
   InitWindow(screenWidth, screenHeight, "My Test 3");
   SetTargetFPS(60);
