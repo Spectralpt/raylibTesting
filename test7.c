@@ -2,6 +2,8 @@
 #include "raymath.h"
 #include <time.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 typedef struct polygon{
   Vector2 vertices[4];
@@ -11,6 +13,7 @@ typedef enum{
   Empty = 0,
   Grass = 1,
   Water = 2,
+  Sand = 3,
 }Sprite;
 
 void DrawPolygon(Polygon poly){
@@ -66,17 +69,7 @@ bool polyPoint(Polygon polygon, float pointX, float pointY) {
   return collision;
 }
 
-void drawCube(Texture2D cubes , int frames, int heightMutationMap[9][9]){
-
-  int map [9][9] = {{1,1,1,1,1,1,1,1,1},
-                    {0,0,1,1,1,1,0,0,1},
-                    {0,0,1,2,2,1,1,0,1},
-                    {0,0,1,2,2,2,2,2,1},
-                    {0,0,1,2,2,2,2,1,1},
-                    {0,0,1,2,2,2,1,0,0},
-                    {1,1,1,1,2,2,2,1,0},
-                    {1,1,1,1,2,1,1,1,0},
-                    {1,1,1,1,1,1,1,1,1}};
+void drawCube(Texture2D *cubes , int frames, int **heightMutationMap, int **map){
 
   const int screenWidth = 800;
   const int screenHeight = 450;
@@ -86,14 +79,11 @@ void drawCube(Texture2D cubes , int frames, int heightMutationMap[9][9]){
 
   int tileScaleFactor = 2;
   
-  Vector2 x = {0.5 * cube.width * tileScaleFactor, 0.25 * cube.height * tileScaleFactor};
-  Vector2 y = {-0.5 * cube.width * tileScaleFactor, 0.25 * cube.height * tileScaleFactor};
-
   Vector2 mouse = GetMousePosition();
 
   DrawText(TextFormat("x:%f y:%f" , mouse.x, mouse.y), 275, 400, 20, LIGHTGRAY);
 
-  int cubeWidth = cube.width;
+  int cubeWidth = cubes[Grass].width;
   
   BeginDrawing();
   for (int mapX = 0; mapX < mapHeight; mapX++) {
@@ -102,13 +92,14 @@ void drawCube(Texture2D cubes , int frames, int heightMutationMap[9][9]){
       int x = (mapX* 0.5 * cubeWidth + mapY * (-0.5) * cubeWidth - cubeWidth/2) * tileScaleFactor + screenWidth/2;
       int y = (mapX* 0.25 * cubeWidth + mapY * 0.25 * cubeWidth) * tileScaleFactor + heightMutationMap[mapX][mapY] * tileScaleFactor;
 
-      Vector2 waterLevel = {0 ,5};
+      Vector2 waterLevel = {0 ,(4 - heightMutationMap[mapX][mapY]) * tileScaleFactor};
 
-      Polygon spritePolygon = createSpritePolygon(x, y, cube ,tileScaleFactor);
+      Polygon spritePolygon = createSpritePolygon(x, y, cubes[Grass] ,tileScaleFactor);
 
       bool collision = polyPoint(spritePolygon, mouse.x, mouse.y);
 
-      Vector2 raisedPosition = {x, collision ? y - 5 : y};
+      Vector2 raisedPosition = {x, collision ? y - 3 * tileScaleFactor : y};
+
       Color cubeColor = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && collision ? RED : WHITE;
       if (map[mapY][mapX] == Grass) {
         DrawTextureEx(cubes[Grass], raisedPosition, 0, tileScaleFactor, WHITE);  
@@ -117,17 +108,67 @@ void drawCube(Texture2D cubes , int frames, int heightMutationMap[9][9]){
         waterLevel = Vector2Add(raisedPosition, waterLevel);
         DrawTextureEx(cubes[Water],  waterLevel, 0, tileScaleFactor, WHITE);
       }
-      // if (mapX == mapY) {
-      //   DrawTextureEx(water, waterLevel, 0, tileScaleFactor, WHITE);  
-      // }
-      // if (mapX != mapY) {
-      //   DrawTextureEx(cube, raisedPosition, 0, tileScaleFactor, cubeColor);      
-      // }
     }
   }
   EndDrawing();
 }
 
+int** randomMap(int mapWidth, int mapHeight){
+  int **map;
+
+  map = (int**)malloc(mapHeight*sizeof(int*));
+
+  for (int i = 0; i < mapHeight; i++) {
+    map[i] = (int*)malloc(mapHeight*sizeof(int));
+  }
+
+  for (int mapX = 0; mapX < mapWidth; mapX ++) {
+    for (int mapY = 0; mapY < mapHeight; mapY ++) {
+      map[mapX][mapY] = (rand() % 2) + 1;
+    }
+  }
+  return map;
+}
+
+int** heightMutator(int mapWidth, int mapHeight){
+
+  int** heightMutationMap = (int**)malloc(mapWidth * sizeof(int*));
+  for(int i = 0; i < mapWidth; i++){
+    heightMutationMap[i] = (int*)malloc(mapHeight * sizeof(int));
+  }
+
+  for(int i = 0; i < 9; i++){
+      for(int j = 0; j < 9; j++){
+          heightMutationMap[i][j] = rand() % 4;
+      }
+  }
+  return heightMutationMap;
+}
+
+Texture2D* textureLoader(){
+
+  FILE *texturesFile;
+  char line[50];
+  int numLines = 3;
+
+  texturesFile =  fopen("sprites/textures.txt", "r");
+  if (texturesFile == NULL) {
+    printf("Get Fucked");
+    exit(1);
+  }
+
+  Texture2D *textures = (Texture2D*)malloc(numLines * sizeof(Texture2D));
+
+  for(int i = 0; i < numLines; i++){
+  fgets(line, 50, texturesFile);
+  line[strcspn(line, "\r\n")] = 0; // Remove newline characters
+  textures[i] = LoadTexture(line); // Load texture from line
+  }
+
+  fclose(texturesFile);
+
+  return textures;
+}
 
 int main(void)
 {
@@ -140,32 +181,24 @@ int main(void)
   SetTargetFPS(60);
   int framesCounter = 0;
 
-  Texture2D cube = LoadTexture("sprites/Sprite-0001.png");
-  Texture2D water = LoadTexture("sprites/Sprite-0003.png");
-  Texture2D cube = LoadTexture("sprites/Sprite-0002.[ng]");
+  int mapWidth = 9, mapHeight = 9;
+  int **heightMutationMap = heightMutator(mapWidth, mapHeight);
 
-  Texture2D[2] cubes ={cube,cube,water};
-  
-  int heightMutationMap[9][9];
-  int heightMutation;
+  Texture2D *textures = (Texture2D*)malloc(3 * sizeof(Texture2D));
+  textures = textureLoader();
 
-
-  
-  for(int i = 0; i < 9; i++){
-      for(int j = 0; j < 9; j++){
-          heightMutationMap[i][j] = rand() % 4;
-      }
-  }
+  int **map = randomMap(mapWidth, mapHeight);
 
   while (!WindowShouldClose()) {
     ClearBackground((Color){34, 32, 52, 255});
     bool mouseButton = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    drawCube(cubes, framesCounter, heightMutationMap);
+    drawCube(textures, framesCounter, heightMutationMap, map);
     if(IsKeyPressed(KEY_E)){
+      free(textures);
       CloseWindow();
     }
   }
-
+  free(textures);
   CloseWindow();
   return 0;
 }

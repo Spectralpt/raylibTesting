@@ -1,0 +1,4 @@
+sprites/Sprite-0006.png
+sprites/Sprite-0001.png
+sprites/Sprite-0004.png
+sprites/Sprite-0005.png
