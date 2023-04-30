@@ -294,34 +294,23 @@ double **generatePerlinNoise(int width, int height, double frequency, int octave
     }
 
 
-    // // normalize the noise values to be between 0 and 1
-    // for (int i = 0; i < height; i++) {
-    //     for (int j = 0; j < width; j++) {
-    //         noise[i][j] /= total_amplitude;
-    //         noise[i][j] = fmax(0, noise[i][j]);
-    //     }
-    // }
-
-for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            noise[i][j] /= total_amplitude;
-            noise[i][j] *= 5.0;
-            noise[i][j] = round(noise[i][j]);
-            noise[i][j] = fmax(0.0, noise[i][j]);
-        }
-    }
-    // round the noise values to the nearest integer
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                noise[i][j] = round(noise[i][j]);
-            }
-        }
+    // normalize the noise values to be between 0 and 1
     for (int i = 0; i < height; i++) {
-        printf("\n");
         for (int j = 0; j < width; j++) {
-          printf("%lf", noise[i][j]);
+          noise[i][j] /= total_amplitude;
+          noise[i][j] = round(noise[i][j]);
+          noise[i][j] = fmax(0, noise[i][j]);
         }
     }
+
+  for (int i = 0; i < height; i++) {
+    printf("\n");
+    for (int j = 0; j < width; j++) {
+      printf("%lf ", noise[i][j]);
+      noise[i][j] = noise[i][j] * 32;
+      printf("%lf ", noise[i][j]);
+    }
+  }
     return noise;
 }
 
