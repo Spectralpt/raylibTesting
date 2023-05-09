@@ -6,7 +6,7 @@
 #include <string.h>
 
 #define GRID_SIZE 20;
-#define MOVE_SPEED 350.0f;
+#define MOVE_SPEED 100.0f;
 
 typedef struct polygon{
   Vector2 vertices[4];
@@ -72,7 +72,7 @@ bool polyPoint(Polygon polygon, Vector2 point) {
   return collision;
 }
 
-void drawCube(Texture2D *cubes , int frames, double **heightMutationMap, int **map, int mapWidth , int mapHeight,Camera2D camera, Vector2 cameraDelta, Color** spriteColors){
+void drawCube(Texture2D *cubes , int frames, double **heightMutationMap, int **map, int mapWidth, int mapHeight, Camera2D camera, Vector2 cameraDelta){
 
   const int screenWidth = 800;
   const int screenHeight = 450;
@@ -106,22 +106,15 @@ void drawCube(Texture2D *cubes , int frames, double **heightMutationMap, int **m
       Vector2 raisedPosition = {x, collision ? y - 3 * tileScaleFactor : y};
 
       Color cubeColor = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && collision ? RED : WHITE;
-
-      if (collision && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        spriteColors[mapY][mapX] = RED;
-      }
-      // if (collision && IsKeyPressed(KEY_R)) {
-
-      // }
       if (map[mapY][mapX] == Grass) {
-        DrawTextureEx(cubes[Grass], raisedPosition, 0, tileScaleFactor, spriteColors[mapY][mapX]);  
+        DrawTextureEx(cubes[Grass], raisedPosition, 0, tileScaleFactor, WHITE);  
       }
       if (map[mapY][mapX] == Sand) {
-        DrawTextureEx(cubes[Sand], raisedPosition, 0, tileScaleFactor, spriteColors[mapY][mapX]);  
+        DrawTextureEx(cubes[Sand], raisedPosition, 0, tileScaleFactor, WHITE);  
       }
       if (map[mapY][mapX] == Water) {
         waterLevel = Vector2Add(raisedPosition, waterLevel);
-        DrawTextureEx(cubes[Water],  waterLevel, 0, tileScaleFactor, spriteColors[mapY][mapX]);
+        DrawTextureEx(cubes[Water],  waterLevel, 0, tileScaleFactor, WHITE);
       }
     }
   }
@@ -201,18 +194,6 @@ int** randomMap(int mapWidth, int mapHeight){
   }
   return map;
 }
-
-int** mapAlocator(int width, int height){
-  int **map;
-
-  // allocate memory for map
-  map = (int**)malloc(height*sizeof(int*));
-  for (int i = 0; i < height; i++) {
-      map[i] = (int*)malloc(width*sizeof(int));
-  }
-  return map;
-}
-
 
 int** generateMap(int width, int height) {
     int **map;
@@ -392,17 +373,6 @@ double **generatePerlinNoise(int width, int height, double frequency, int octave
     return noise;
 }
 
-Color** editorColorInit(int mapWidth, int mapHeight){
-  Color **spriteColors = (Color**)malloc(sizeof(Color*) * mapWidth);
-  for (int i = 0; i < mapHeight; i++) {
-    spriteColors[i] = (Color*)malloc(sizeof(Color) * mapHeight);
-    for (int j = 0; j < mapWidth; j++) {
-      spriteColors[i][j] = WHITE;
-    }
-  }
-  return spriteColors;
-}
-
 Texture2D* textureLoader(){
 
   FILE *texturesFile;
@@ -448,7 +418,7 @@ int main(void)
   SetTargetFPS(60);
   int framesCounter = 0;
 
-  int mapWidth = 20, mapHeight = 20;
+  int mapWidth = 40, mapHeight = 40;
   double **heightMutationMap = heightMutator(mapWidth, mapHeight);
   double **heightMutationMap2 = generatePerlinNoise(mapWidth, mapHeight, 0.05, 5, 2);
 
@@ -468,8 +438,6 @@ int main(void)
 
   bool pause = false;
 
-  Color **spriteColors = editorColorInit(mapWidth, mapHeight);
-
   while (!WindowShouldClose()) {
     // UpdateMusicStream(music1);
     ClearBackground((Color){34, 32, 52, 255});
@@ -477,7 +445,7 @@ int main(void)
     Vector2 mouse = GetMousePosition();
     cameraMover(&camera, &cameraDelta);
     // cameraDelta = cameraPosition(&camera);
-    drawCube(textures, framesCounter, heightMutationMap2, map, mapWidth, mapHeight, camera, cameraDelta, spriteColors);
+    drawCube(textures, framesCounter, heightMutationMap2, map,mapWidth, mapHeight, camera, cameraDelta);
     if(IsKeyPressed(KEY_E)){
       free(textures);
       CloseWindow();
