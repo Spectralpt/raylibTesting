@@ -18,6 +18,15 @@ typedef struct polygon{
 }Polygon ;
 
 
+typedef struct tile{
+  int x;
+  int y;
+  int z;
+  Color color;
+  int type;
+}Tile;
+
+
 typedef enum{
   Empty = 0,
   Grass = 1,
@@ -127,7 +136,7 @@ int* selectBlock(){
 }
 
 // The work horse of this fucking thing if its supposed to be drawn it goes here (function name should be changed in futture to reflect that)
-void drawLayer(Texture2D *cubes , int frames, double **heightMutationMap, int ***map, int mapWidth , int mapHeight,Camera2D camera, Vector2 cameraDelta, Color*** spriteColors, int *selectedBlock, Texture2D hotbar){
+void drawLayer(Texture2D *cubes , int frames, Tile ***map, int mapWidth , int mapHeight, Camera2D camera, Vector2 cameraDelta, int *selectedBlock, Texture2D hotbar){
 
   const int screenWidth = 800;
   const int screenHeight = 450;
@@ -155,11 +164,11 @@ void drawLayer(Texture2D *cubes , int frames, double **heightMutationMap, int **
         switch (mapZ) {
           case 0:
             x = (mapX* 0.5 * cubeWidth + mapY * (-0.5) * cubeWidth - cubeWidth/2) * tileScaleFactor + screenWidth/2;
-            y = (mapX* 0.25 * cubeWidth + mapY * 0.25 * cubeWidth) * tileScaleFactor + heightMutationMap[mapX][mapY] * tileScaleFactor;
+            y = (mapX* 0.25 * cubeWidth + mapY * 0.25 * cubeWidth) * tileScaleFactor;
           break;
           case 1:
             x = (mapX* 0.5 * cubeWidth + mapY * (-0.5) * cubeWidth - cubeWidth/2) * tileScaleFactor + screenWidth/2;
-            y = (mapX* 0.25 * cubeWidth + mapY * 0.25 * cubeWidth) * tileScaleFactor + heightMutationMap[mapX][mapY] * tileScaleFactor;
+            y = (mapX* 0.25 * cubeWidth + mapY * 0.25 * cubeWidth) * tileScaleFactor;
             y -= cubeHeight/2 * tileScaleFactor;
           break;
           // case 2:
@@ -169,13 +178,13 @@ void drawLayer(Texture2D *cubes , int frames, double **heightMutationMap, int **
           // break;
         }   
 
-        Vector2 waterLevel = {0 ,(4 - heightMutationMap[mapX][mapY]) * tileScaleFactor};
+        Vector2 waterLevel = {0 ,4 * tileScaleFactor};
 
         Polygon spritePolygon;
 
-        if (!(mapZ == 1 && map[mapZ][mapY][mapX] == 0)) {
+        // if (!(mapZ == 1 && map[mapZ][mapY][mapX].type == Empty)) {
           spritePolygon = createSpritePolygon(x, y, cubes[Grass] ,tileScaleFactor);
-        }
+        // }
 
         Vector2 spam = Vector2Add(mouse, cameraDelta);
         bool collision = polyPoint(spritePolygon, spam);
@@ -184,27 +193,20 @@ void drawLayer(Texture2D *cubes , int frames, double **heightMutationMap, int **
         Vector2 raisedPosition = {x, y};
         // Vector2 raisedPosition = {x, collision ? y - 3 * tileScaleFactor: y};
 
-        if (collision && !colorCompare(RED, spriteColors[mapZ][mapY][mapX])) {
-          spriteColors[mapZ][mapY][mapX] = LIGHTGRAY;
+        if (collision && !colorCompare(RED, map[mapZ][mapY][mapX].color)) {
+          map[mapZ][mapY][mapX].color = LIGHTGRAY;
         }
         // you need to add a check for color if this is red i shouldnt change it (this is a proof of concept in case you actually need it)
-        if (!collision && !colorCompare(RED, spriteColors[mapZ][mapY][mapX])) {           
-          spriteColors[mapZ][mapY][mapX] = WHITE;
+        if (!collision && !colorCompare(RED, map[mapZ][mapY][mapX].color)) {           
+          map[mapZ][mapY][mapX].color = WHITE;
         }
-
-        if (collision) {
-          test.x = mapX;
-          test.y = mapY;
-          test.z = mapZ;
-        }
-
 
         if (collision && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-          spriteColors[mapZ][mapY][mapX] = RED;
+          map[mapZ][mapY][mapX].color = RED;
         }
 
-        if (map[1][mapY][mapX] == Grass) {
-          spriteColors[0][mapY-1][mapX] = RED;
+        if (map[1][mapY][mapX].type == Grass) {
+          map[0][mapY][mapX+1].color = DARKGRAY;
         }
 
         if (IsKeyPressed(KEY_ONE)) {
@@ -221,26 +223,39 @@ void drawLayer(Texture2D *cubes , int frames, double **heightMutationMap, int **
         }
         
         if (collision && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT && mapZ < mapDepth - 1)) {
-          map[mapZ+1][mapY][mapX] = selectedBlock[1];
+          map[mapZ+1][mapY][mapX].type = selectedBlock[1];
         }
 
-        if (map[mapZ][mapY][mapX] == Grass) {
-          DrawTextureEx(cubes[Grass], raisedPosition, 0, tileScaleFactor, spriteColors[mapZ][mapY][mapX]);  
+        if (map[mapZ][mapY][mapX].type == Grass) {
+          DrawTextureEx(cubes[Grass], raisedPosition, 0, tileScaleFactor, map[mapZ][mapY][mapX].color);  
         }
-        if (map[mapZ][mapY][mapX] == Sand) {
-          DrawTextureEx(cubes[Sand], raisedPosition, 0, tileScaleFactor, spriteColors[mapZ][mapY][mapX]);  
+        if (map[mapZ][mapY][mapX].type == Sand) {
+          DrawTextureEx(cubes[Sand], raisedPosition, 0, tileScaleFactor, map[mapZ][mapY][mapX].color);  
         }
-        if (map[mapZ][mapY][mapX] == Water) {
+        if (map[mapZ][mapY][mapX].type == Water) {
           waterLevel = Vector2Add(raisedPosition, waterLevel);
-          DrawTextureEx(cubes[Water],  waterLevel, 0, tileScaleFactor, spriteColors[mapZ][mapY][mapX]);
+          DrawTextureEx(cubes[Water],  waterLevel, 0, tileScaleFactor, map[mapZ][mapY][mapX].color);
         }
+
+
+        // if (collision) {
+        //   map[mapZ][mapY][mapX].x = mapX;
+        //   map[mapZ][mapY][mapX].y = mapY;
+        //   map[mapZ][mapY][mapX].z = mapZ;
+        // }
+
       }
     }
   }
 
   EndMode2D();
-    // DrawText(TextFormat("x:%f y:%f" , mouse.x, mouse.y), 275, 400, 20, DARKGRAY);
-    DrawText(TextFormat("x:%f y:%f z:%f" , test.x, test.y, test.z), 225, 375, 20, DARKGRAY);
+  // for (int mapZ = 0; mapZ < mapDepth; mapZ++) {
+  //   for (int mapX = 0; mapX < mapHeight; mapX++) {
+  //     for (int mapY = 0; mapY < mapWidth ; mapY++) {
+  //     // DrawText(TextFormat("x:%f y:%f" , mouse.x, mouse.y), 275, 400, 20, DARKGRAY);
+  //     }
+  //   }
+  // }
   drawUI(cubes, selectedBlock[1], hotbar);
   EndDrawing();
 }
@@ -291,17 +306,17 @@ int** randomMap(int mapWidth, int mapHeight){
 
 
 // Allocates the space for a 2D map (3D for now i think)
-int*** mapAllocator(int width, int height, int depth){
-  int ***map;
+Tile*** mapAllocator(int width, int height, int depth){
+  Tile ***map;
 
   // allocate memory for map
-  map = (int***)calloc(depth, sizeof(int**));
+  map = (Tile***)calloc(depth, sizeof(Tile**));
   for (int z = 0; z < depth; z++) {
-      map[z] = (int**)calloc(height, sizeof(int*));
+      map[z] = (Tile**)calloc(height, sizeof(Tile*));
       for (int i = 0; i < height; i++) {
-          map[z][i] = (int*)calloc(width, sizeof(int));
+          map[z][i] = (Tile*)calloc(width, sizeof(Tile));
           for (int k = 0; k < width; k++) {
-            map[0][i][k] = Grass;
+            map[0][i][k].type = Grass;
             
           }
       }
@@ -311,8 +326,8 @@ int*** mapAllocator(int width, int height, int depth){
 
 
 // Generates the a random map (3D) based on a simple generation algorithm 
-int*** generateMap(int width, int height) {
-    int ***map;
+Tile*** generateMap(int width, int height) {
+    Tile ***map;
     int i, j, k, l;
     int depth = 2;
     int num_water_tiles = 0;
@@ -322,19 +337,29 @@ int*** generateMap(int width, int height) {
     // seed the random number generator
     srand(time(NULL));
 
-    map = (int***)calloc(depth, sizeof(int**));
+    map = (Tile***)calloc(depth, sizeof(Tile**));
     for (int z = 0; z < depth; z++) {
-        map[z] = (int**)calloc(height, sizeof(int*));
+        map[z] = (Tile**)calloc(height, sizeof(Tile*));
         for (i = 0; i < height; i++) {
-            map[z][i] = (int*)calloc(width, sizeof(int));
+            map[z][i] = (Tile*)calloc(width, sizeof(Tile));
         }
+    }
+
+    for (int mapZ = 0; mapZ < depth; mapZ++) {
+      for (int mapX; mapX < width; mapX++) {
+        for (int mapY; mapY < height; mapY++) {
+          map[mapZ][mapY][mapX].x = mapX;
+          map[mapZ][mapY][mapX].y = mapY;
+          map[mapZ][mapY][mapX].z = mapZ;
+        }
+      }
     }
 
 
     // initialize map to all dirt
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
-            map[0][i][j] = Grass;
+            map[0][i][j].type = Grass;
         }
     }
 
@@ -342,7 +367,7 @@ int*** generateMap(int width, int height) {
     for (k = 0; k < 3; k++) {
         i = rand() % height;
         j = rand() % width;
-        map[0][i][j] = Water;
+        map[0][i][j].type = Water;
         num_water_tiles++;
     }
 
@@ -350,21 +375,21 @@ int*** generateMap(int width, int height) {
     while (num_water_tiles < max_water_tiles) {
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
-                if (map[0][i][j] == Water) {
-                    if (i > 0 && map[0][i-1][j] != Water && rand() % 2 == 0) {
-                        map[0][i-1][j] = Water;
+                if (map[0][i][j].type == Water) {
+                    if (i > 0 && map[0][i-1][j].type != Water && rand() % 2 == 0) {
+                        map[0][i-1][j].type = Water;
                         num_water_tiles++;
                     }
-                    if (i < height-1 && map[0][i+1][j] != Water && rand() % 2 == 0) {
-                        map[0][i+1][j] = Water;
+                    if (i < height-1 && map[0][i+1][j].type != Water && rand() % 2 == 0) {
+                        map[0][i+1][j].type = Water;
                         num_water_tiles++;
                     }
-                    if (j > 0 && map[0][i][j-1] != Water && rand() % 2 == 0) {
-                        map[0][i][j-1] = Water;
+                    if (j > 0 && map[0][i][j-1].type != Water && rand() % 2 == 0) {
+                        map[0][i][j-1].type = Water;
                         num_water_tiles++;
                     }
-                    if (j < width-1 && map[0][i][j+1] != Water && rand() % 2 == 0) {
-                        map[0][i][j+1] = Water;
+                    if (j < width-1 && map[0][i][j+1].type != Water && rand() % 2 == 0) {
+                        map[0][i][j+1].type = Water;
                         num_water_tiles++;
                     }
                 }
@@ -375,123 +400,23 @@ int*** generateMap(int width, int height) {
     // add sand around water
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
-            if (map[0][i][j] == Water) {
-                if (i > 0 && map[0][i-1][j] != Water) {
-                    map[0][i-1][j] = Sand;
+            if (map[0][i][j].type == Water) {
+                if (i > 0 && map[0][i-1][j].type != Water) {
+                    map[0][i-1][j].type = Sand;
                 }
-                if (i < height-1 && map[0][i+1][j] != Water) {
-                    map[0][i+1][j] = Sand;
+                if (i < height-1 && map[0][i+1][j].type != Water) {
+                    map[0][i+1][j].type = Sand;
                 }
-                if (j > 0 && map[0][i][j-1] != Water) {
-                    map[0][i][j-1] = Sand;
+                if (j > 0 && map[0][i][j-1].type != Water) {
+                    map[0][i][j-1].type = Sand;
                 }
-                if (j < width-1 && map[0][i][j+1] != Water) {
-                    map[0][i][j+1] = Sand;
+                if (j < width-1 && map[0][i][j+1].type != Water) {
+                    map[0][i][j+1].type = Sand;
                 }
             }
         }
     }
     return map;
-}
-
-
-// Mutates the heigt of the tile by a random ammount to give the tiles some sort of variation
-double** heightMutator(int mapWidth, int mapHeight){
-
-  double** heightMutationMap = (double**)malloc(mapWidth * sizeof(double*));
-  for(int i = 0; i < mapWidth; i++){
-    heightMutationMap[i] = (double*)malloc(mapHeight * sizeof(double));
-  }
-
-  for(int i = 0; i < mapWidth; i++){
-    printf("\n");
-      for(int j = 0; j < mapHeight; j++){
-          heightMutationMap[i][j] = rand() % 2;
-          heightMutationMap[i][j] *= 32;
-          printf("%lf ", heightMutationMap[i][j]);
-      }
-  }
-  return heightMutationMap;
-}
-
-
-// Perlin noise generator, not really sure if we are going to use this though. Can be used as either height heightMutator or map generator
-double **generatePerlinNoise(int width, int height, double frequency, int octaves, double persistence)
-{
-    // allocate memory for the 2D array
-    double **noise = (double**)malloc(height * sizeof(double*));
-    for (int i = 0; i < height; i++) {
-        noise[i] = (double*)malloc(width * sizeof(double));
-    }
-
-    // generate the noise grid
-    double amplitude = 1.0;
-    double total_amplitude = 0.0;
-    for (int octave = 0; octave < octaves; octave++) {
-        // generate a new grid for this octave
-        double **grid = (double**)malloc((width+1) * sizeof(double*));
-        for (int i = 0; i < width+1; i++) {
-            grid[i] = (double*)malloc((height+1) * sizeof(double));
-        }
-        for (int i = 0; i < width+1; i++) {
-            for (int j = 0; j < height+1; j++) {
-                grid[i][j] = (double)rand() / RAND_MAX;
-            }
-        }
-
-        // interpolate the grid to the target size
-        int step_size = width / width;
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                double x = j * step_size * frequency;
-                double y = i * step_size * frequency;
-
-                int x0 = floor(x);
-                int y0 = floor(y);
-                int x1 = x0 + 1;
-                int y1 = y0 + 1;
-
-                double u = x - x0;
-                double v = y - y0;
-
-                double e00 = grid[x0][y0];
-                double e01 = grid[x0][y1];
-                double e10 = grid[x1][y0];
-                double e11 = grid[x1][y1];
-
-                double a = e00;
-                double b = e10 - e00;
-                double c = e01 - e00;
-                double d = e00 - e10 - e01 + e11;
-
-                noise[i][j] += (a + b*u + c*v + d*u*v) * amplitude;
-            }
-        }
-
-        // update the frequency and amplitude for the next octave
-        frequency *= 2;
-        total_amplitude += amplitude;
-        amplitude *= persistence;
-
-        // free the grid memory
-        for (int i = 0; i < width+1; i++) {
-            free(grid[i]);
-        }
-        free(grid);
-    }
-
-    // normalize the noise values to be between 0 and 1
-    if (total_amplitude != 0.0) {
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                noise[i][j] /= total_amplitude;
-                noise[i][j] = round(noise[i][j] * 31) / 31.0;
-                noise[i][j] = 0;
-            }
-        }
-    }
-
-    return noise;
 }
 
 
@@ -544,14 +469,28 @@ Texture2D* textureLoader(){
 }
 
 
+void FullscreenToggle(int screenWidth, int screenHeight){
+
+  if (!IsWindowFullscreen()) {
+    int monitor = GetCurrentMonitor();
+    SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+    ToggleFullscreen();
+  }
+  else {
+    ToggleFullscreen();
+    SetWindowSize(screenWidth, screenHeight);
+  }
+}
+
+
 // The Goat the OG the one and only main function does whatever the fuck you want it to 
 int main(void)
 {
 
   // Screen dimentions these will most likely be changed in the future or maybe even set by the user in a menu or maybe even have the game with a
   // set window size but have it scale depending on the resolution
-  const int screenWidth = 1920;
-  const int screenHeight = 1080;
+  const int screenWidth = 800;
+  const int screenHeight = 450;
 
   // Inition the random number generator
   srand(time(NULL));
@@ -574,11 +513,6 @@ int main(void)
   // map dimentions x, y, z
   int mapWidth = 20, mapHeight = 20, mapDepth = 2;
 
-  // Height mutation maps so for not going to be used to these should be commented out for now (not really cause im lazy and dont want to change 
-  // the draw layer function)
-  double **heightMutationMap = heightMutator(mapWidth, mapHeight);
-  double **heightMutationMap2 = generatePerlinNoise(mapWidth, mapHeight, 0.05, 5, 2);
-
 
   // Loads the textures to this arrays using the textureLoader() func
   Texture2D *textures = (Texture2D*)malloc(3 * sizeof(Texture2D));
@@ -586,8 +520,8 @@ int main(void)
 
   // Map declaration
   // int **map = randomMap(mapWidth, mapHeight);
-  // int ***map = generateMap(mapWidth, mapHeight);
-  int ***map = mapAllocator(mapWidth, mapHeight, mapDepth);
+  Tile ***map = generateMap(mapWidth, mapHeight);
+  // Tile ***map = mapAllocator(mapWidth, mapHeight, mapDepth);
 
   // Camera declaration this should be moved to its own function for the sake of clarity
   Camera2D camera;
@@ -604,7 +538,7 @@ int main(void)
 
 
   // Declares the color array base ont he editorColorInit fucn this has mention in the fucntion comment should be changed in the future
-  Color ***spriteColors = editorColorInit(mapWidth, mapHeight, mapDepth);
+  // Color ***spriteColors = editorColorInit(mapWidth, mapHeight, mapDepth);
 
   // for block selection
   int *selectedBlock = selectBlock();
@@ -618,12 +552,16 @@ int main(void)
     Vector2 mouse = GetMousePosition();
     cameraMover(&camera, &cameraDelta);
     // cameraDelta = cameraPosition(&camera);
-    drawLayer(textures, framesCounter, heightMutationMap2, map, mapWidth, mapHeight, camera, cameraDelta, spriteColors, selectedBlock, hotbar);
+    drawLayer(textures, framesCounter, map, mapWidth, mapHeight, camera, cameraDelta, selectedBlock, hotbar);
 
     // If e key is pressed exit game
     if(IsKeyPressed(KEY_E)){
       free(textures);
       CloseWindow();
+    }
+
+    if (IsKeyPressed(KEY_SPACE)) {
+      FullscreenToggle(screenWidth, screenHeight); 
     }
 
     // If numpad 1 is pressed play music one
@@ -645,7 +583,6 @@ int main(void)
   // Free everything before exiting or succumb the the memory gods
   free(textures);
   free(map);
-  free(spriteColors);
   CloseWindow();
   return 0;
 }
