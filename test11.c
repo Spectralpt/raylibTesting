@@ -201,13 +201,13 @@ void drawLayer(Texture2D *cubes , int frames, Tile ***map, int mapWidth , int ma
           map[mapZ][mapY][mapX].color = WHITE;
         }
 
-        if (collision && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-          map[mapZ][mapY][mapX].color = RED;
-        }
-
-        if (map[1][mapY][mapX].type == Grass) {
-          map[0][mapY][mapX+1].color = DARKGRAY;
-        }
+//        if (collision && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+//          map[mapZ][mapY][mapX].color = RED;
+//        }
+//
+//        if (map[1][mapY][mapX].type == Grass) {
+//          map[0][mapY][mapX+1].color = DARKGRAY;
+//        }
 
         if (IsKeyPressed(KEY_ONE)) {
           selectedBlock[1] = Grass;
@@ -447,6 +447,11 @@ Texture2D* textureLoader(){
   FILE *texturesFile;
   char line[50];
   int numLines = 4;
+  char characterInFile;
+  
+//  for (characterInFile = getc(texturesFile); characterInFile != EOF; characterInFile = getc(texturesFile))
+//      if (characterInFile == '\n') 
+//          numLines = numLines + 1;
 
   texturesFile =  fopen("sprites/textures.txt", "r");
   if (texturesFile == NULL) {
@@ -495,7 +500,6 @@ int main(void)
   // Inition the random number generator
   srand(time(NULL));
 
-  
   // Inition the screen and audio device, default Raylib requirements
   InitWindow(screenWidth, screenHeight, "My Test 3");
   InitAudioDevice();
