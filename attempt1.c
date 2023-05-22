@@ -15,32 +15,39 @@ typedef struct spritePosition{
 
 
 typedef struct polygon{
-  Vector2 vertices[4];
+    Vector2 vertices[4];
 }Polygon ;
 
 
 typedef struct tile{
-  int x;
-  int y;
-  Color color;
-  int type;
+    int x;
+    int y;
+    Color color;
+    int type;
 }Tile;
 
 
+typedef struct Player{
+    int id;
+    Texture2D texture;
+    Vector2 position;
+} Player;
+
+
 typedef enum{
-  Empty = 0,
-  Grass = 1,
-  Water = 2,
-  Sand = 3,
+    Empty = 0,
+    Grass = 1,
+    Water = 2,
+    Sand = 3,
 }Sprite;
 
 //Color compare fucntion used to compare the color type inside raylib
 bool colorCompare(Color color1 , Color color2){
-  bool sameColor = false;
-  if (color1.r == color2.r && color1.g == color2.g && color1.b == color2.b && color1.a == color2.a) {
-    return true;
-  }
-  return false;
+    bool sameColor = false;
+    if (color1.r == color2.r && color1.g == color2.g && color1.b == color2.b && color1.a == color2.a) {
+        return true;
+    }
+    return false;
 }
 
 
@@ -75,31 +82,31 @@ Polygon createSpritePolygon(int tileX, int tileY, Texture2D cube , int tileScale
 
 // Collision detection formula for point in a polygon we use this to detect if the mouse inside a non-regular polygon (aka sprites)
 bool polyPoint(Polygon polygon, Vector2 point) {
-  bool collision = false;
+    bool collision = false;
 
-  // go through each of the vertices, plus
-  // the next vertex in the list
-  int next = 0;
-  for (int current=0; current<4; current++) {
+    // go through each of the vertices, plus
+    // the next vertex in the list
+    int next = 0;
+    for (int current=0; current<4; current++) {
 
-    // get next vertex in list
-    // if we've hit the end, wrap around to 0
-    next = current+1;
-    if (next == 4) next = 0;
+        // get next vertex in list
+        // if we've hit the end, wrap around to 0
+        next = current+1;
+        if (next == 4) next = 0;
 
-    // get the Vectors at our current position
-    // this makes our if statement a little cleaner
-    Vector2 vc = polygon.vertices[current];    // c for "current"
-    Vector2 vn = polygon.vertices[next];       // n for "next"
+        // get the Vectors at our current position
+        // this makes our if statement a little cleaner
+        Vector2 vc = polygon.vertices[current];    // c for "current"
+        Vector2 vn = polygon.vertices[next];       // n for "next"
 
-    // compare position, flip 'collision' variable
-    // back and forth
-    if (((vc.y >= point.y && vn.y < point.y) || (vc.y < point.y && vn.y >= point.y)) &&
-         (point.x < (vn.x-vc.x)*(point.y-vc.y) / (vn.y-vc.y)+vc.x)) {
+        // compare position, flip 'collision' variable
+        // back and forth
+        if (((vc.y >= point.y && vn.y < point.y) || (vc.y < point.y && vn.y >= point.y)) &&
+                (point.x < (vn.x-vc.x)*(point.y-vc.y) / (vn.y-vc.y)+vc.x)) {
             collision = !collision;
+        }
     }
-  }
-  return collision;
+    return collision;
 }
 
 
@@ -110,15 +117,42 @@ void drawUi(void){
 
 //Used to store position of currently selected block
 SpritePosition* selectBlock(){
-  SpritePosition* selectedBlock = (SpritePosition*)malloc(sizeof(SpritePosition));
-  return selectedBlock;
+    SpritePosition* selectedBlock = (SpritePosition*)malloc(sizeof(SpritePosition));
+    return selectedBlock;
+}
+
+
+void drawPlayer(Player player, int tileScaleFactor, int cubeWidth){
+
+    int x = (player.position.x* 0.5 * cubeWidth + player.position.y * (-0.5) * cubeWidth - cubeWidth/2) * tileScaleFactor;
+    int y = (player.position.x* 0.25 * cubeWidth + player.position.y * 0.25 * cubeWidth) * tileScaleFactor;
+
+    Vector2 playerScreenPos = {x, y - (player.texture.height/2 - 10) * tileScaleFactor};
+
+    DrawTextureEx(player.texture, playerScreenPos, 0, 2, WHITE);
+}
+
+
+void playerPostionUpdate(Player player, Vector2 endPosition, int tileScaleFactor, int cubeWidth){
+    for (player.position.y;  player.position.y < endPosition.y; player.position.y++) {
+        for (player.position.x; player.position.x < endPosition.x; player.position.x++) {
+            drawPlayer(player, tileScaleFactor, cubeWidth);
+        }
+    }
 }
 
 
 // This function will be used to draw all the game components going from map to players and UI elements
-void drawSceneGame(Texture2D *textures, Tile **map, int mapWidth, int mapHeight, Camera2D camera, Vector2 cameraDelta, SpritePosition *selectedBlock, int tileScaleFactor){
+void drawSceneGame(Texture2D *textures,Texture2D player, Tile **map, int mapWidth, int mapHeight, Camera2D camera, Vector2 cameraDelta, SpritePosition *selectedBlock, int tileScaleFactor){
     int cubeWidth = textures[Grass].width;
     int cubeHeight = textures[Grass].height;
+    //TESTING
+    Player player1;
+    player1.id = 1;
+    player1.position.x = -1;
+    player1.position.y = -1;
+    player1.texture = player;
+    //TESTING
     BeginDrawing();
     BeginMode2D(camera);
     for (int mapX = 0; mapX < mapHeight; mapX++) {
@@ -133,6 +167,8 @@ void drawSceneGame(Texture2D *textures, Tile **map, int mapWidth, int mapHeight,
             Vector2 mousePositionCorrection = Vector2Add(GetMousePosition(), cameraDelta);
             bool mouseColision = polyPoint(spritePolygon, mousePositionCorrection);
 
+                drawPlayer(player1, tileScaleFactor, cubeWidth);
+
             switch (map[mapY][mapX].type) {
                 case Grass:
                     DrawTextureEx(textures[Grass], spritePosition, 0, tileScaleFactor, mouseColision ? LIGHTGRAY : WHITE );
@@ -144,7 +180,6 @@ void drawSceneGame(Texture2D *textures, Tile **map, int mapWidth, int mapHeight,
                     DrawTextureEx(textures[Sand], spritePosition, 0, tileScaleFactor, mouseColision ? LIGHTGRAY : WHITE );
                     break;
             }
-
         }
     }
 
@@ -160,30 +195,30 @@ void drawSceneEditor(){
 
 // Moves the camera and give the delta for the camera position used to keep the mouse position true to the world coordinates
 void cameraMover(Camera2D *camera, Vector2 *mouse){
-  
-  float deltaTime = GetFrameTime();
-  float cameraSpeed = 200;
 
-  if (IsKeyDown(KEY_A)) {
-    camera->target.x -= cameraSpeed * deltaTime;
-    mouse->x -= cameraSpeed * deltaTime;
-  }
-  if (IsKeyDown(KEY_D)) {
-    camera->target.x += cameraSpeed * deltaTime;
-    mouse->x += cameraSpeed * deltaTime;
-  }
-  if (IsKeyDown(KEY_W)) {
-    camera->target.y -= cameraSpeed * deltaTime;
-    mouse->y -= cameraSpeed * deltaTime;
-  }
-  if (IsKeyDown(KEY_S)) {
-    camera->target.y += cameraSpeed * deltaTime;
-    mouse->y += cameraSpeed * deltaTime;
-  }
+    float deltaTime = GetFrameTime();
+    float cameraSpeed = 200;
+
+    if (IsKeyDown(KEY_A)) {
+        camera->target.x -= cameraSpeed * deltaTime;
+        mouse->x -= cameraSpeed * deltaTime;
+    }
+    if (IsKeyDown(KEY_D)) {
+        camera->target.x += cameraSpeed * deltaTime;
+        mouse->x += cameraSpeed * deltaTime;
+    }
+    if (IsKeyDown(KEY_W)) {
+        camera->target.y -= cameraSpeed * deltaTime;
+        mouse->y -= cameraSpeed * deltaTime;
+    }
+    if (IsKeyDown(KEY_S)) {
+        camera->target.y += cameraSpeed * deltaTime;
+        mouse->y += cameraSpeed * deltaTime;
+    }
 }
 
 
-    // Generates random 2d map based on a simple algorithm 
+// Generates random 2d map based on a simple algorithm  
 Tile** generateMap(int width, int height) {
     Tile **map;
     int i, j, k, l;
@@ -268,128 +303,131 @@ Tile** generateMap(int width, int height) {
 // all in one array instead of having to pass them individually
 Texture2D* textureLoader(){
 
-  FILE *texturesFile;
-  char line[50];
-  int numLines = 4;
-  char characterInFile;
-  
-//  for (characterInFile = getc(texturesFile); characterInFile != EOF; characterInFile = getc(texturesFile))
-//      if (characterInFile == '\n') 
-//          numLines = numLines + 1;
+    FILE *texturesFile;
+    char line[50];
+    int numLines = 4;
+    char characterInFile;
 
-  texturesFile =  fopen("sprites/textures.txt", "r");
-  if (texturesFile == NULL) {
-    printf("Get Fucked");
-    exit(1);
-  }
+    //  for (characterInFile = getc(texturesFile); characterInFile != EOF; characterInFile = getc(texturesFile))
+    //      if (characterInFile == '\n') 
+    //          numLines = numLines + 1;
 
-  Texture2D *textures = (Texture2D*)malloc(numLines * sizeof(Texture2D));
+    texturesFile =  fopen("sprites/textures.txt", "r");
+    if (texturesFile == NULL) {
+        printf("Get Fucked");
+        exit(1);
+    }
 
-  for(int i = 0; i < numLines; i++){
-  fgets(line, 50, texturesFile);
-  line[strcspn(line, "\r\n")] = 0; // Remove newline characters
-  printf("%s\n\n\n\n", line);
-  textures[i] = LoadTexture(line); // Load texture from line
-  }
+    Texture2D *textures = (Texture2D*)malloc(numLines * sizeof(Texture2D));
 
-  fclose(texturesFile);
+    for(int i = 0; i < numLines; i++){
+        fgets(line, 50, texturesFile);
+        line[strcspn(line, "\r\n")] = 0; // Remove newline characters
+        printf("%s\n\n\n\n", line);
+        textures[i] = LoadTexture(line); // Load texture from line
+    }
 
-  return textures;
+    fclose(texturesFile);
+
+    return textures;
 }
 
 
 void FullscreenToggle(int screenWidth, int screenHeight){
 
-  if (!IsWindowFullscreen()) {
-    int monitor = GetCurrentMonitor();
-    SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
-    ToggleFullscreen();
-  }
-  else {
-    ToggleFullscreen();
-    SetWindowSize(screenWidth, screenHeight);
-  }
+    if (!IsWindowFullscreen()) {
+        int monitor = GetCurrentMonitor();
+        SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+        ToggleFullscreen();
+    }
+    else {
+        ToggleFullscreen();
+        SetWindowSize(screenWidth, screenHeight);
+    }
 }
 
 
 // The Goat the OG the one and only main function does whatever the fuck you want it to 
 int main(void)
 {
+    // Screen dimentions these will most likely be changed in the future or maybe even set by the user in a menu or maybe even have the game with a
+    // set window size but have it scale depending on the resolution
+    const int screenWidth = 1920;
+    const int screenHeight = 1080;
 
-  // Screen dimentions these will most likely be changed in the future or maybe even set by the user in a menu or maybe even have the game with a
-  // set window size but have it scale depending on the resolution
-  const int screenWidth = 800;
-  const int screenHeight = 450;
+    int tileScaleFactor = 2;
 
-  int tileScaleFactor = 2;
+    // init the random number generator
+    srand(time(NULL));
 
-  // init the random number generator
-  srand(time(NULL));
-  
-  // init the screen and audio device, default Raylib requirements
-  InitWindow(screenWidth, screenHeight, "My Test 3");
-  InitAudioDevice();
+    // init the screen and audio device, default Raylib requirements
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    InitWindow(screenWidth, screenHeight, "attempt1");
+    InitAudioDevice();
 
-  // will try to fix the sounds (aka use music type) in the future for now they wont be used
-//  Sound music1 = LoadSound("./audio/music/Heartbeat+-+320bit.mp3");
-//  Sound music2 = LoadSound("./audio/music/Celtic+Ambiance+-+320bit.mp3");
+    // will try to fix the sounds (aka use music type) in the future for now they wont be used
+    //  Sound music1 = LoadSound("./audio/music/Heartbeat+-+320bit.mp3");
+    //  Sound music2 = LoadSound("./audio/music/Celtic+Ambiance+-+320bit.mp3");
 
-  // Make game run at an expected 60 fps
-  SetTargetFPS(60);
-  // frame counter may be usefull in the future might aswell define it now
-  int framesCounter = 0;
+    // Make game run at an expected 60 fps
+    SetTargetFPS(60);
+    // frame counter may be usefull in the future might aswell define it now
+    int framesCounter = 0;
 
-  // map dimentions x, y, z
-  int mapWidth = 20, mapHeight = 20, mapDepth = 2;
+    // map dimentions x, y, z
+    int mapWidth = 20, mapHeight = 20, mapDepth = 2;
 
-  // Loads the textures to this arrays using the textureLoader() func
-  Texture2D *textures;// = (Texture2D*)malloc(3 * sizeof(Texture2D));
-  textures = textureLoader();
+    // Loads the textures to this arrays using the textureLoader() func
+    Texture2D *textures;// = (Texture2D*)malloc(3 * sizeof(Texture2D));
+    textures = textureLoader();
+    Texture2D player;
+    player = LoadTexture("./sprites/GOOSESPRITE.png");
 
-  // Map declaration
-  Tile **map = generateMap(mapWidth, mapHeight);
+    // Map declaration
+    Tile **map = generateMap(mapWidth, mapHeight);
 
-  // Camera declaration this should be moved to its own function for the sake of clarity
-  Camera2D camera;
-  Vector2 position = {0,0};
-  camera.zoom = 1.0f;
-  camera.offset = position;
-  camera.rotation = 0;
-  camera.target = position;
-  Vector2 cameraDelta = {0 ,0};
+    // Camera declaration this should be moved to its own function for the sake of clarity
+    Camera2D camera;
+    Vector2 position = {0,0};
+    camera.zoom = 1.0f;
+    camera.offset = position;
+    camera.rotation = 0;
+    camera.target = position;
+    Vector2 cameraDelta = {0 ,0};
 
 
-  // This is for music pausing i still need to figure that one out
-  bool pause = false;
+    // This is for music pausing i still need to figure that one out
+    bool pause = false;
 
-  // for block selection
-  SpritePosition *selectedBlock = selectBlock();
+    // for block selection
+    SpritePosition *selectedBlock = selectBlock();
 
-  Texture2D hotbar = LoadTexture("./sprites/hotbar.png");
-  // Main game loop this is the GOD of this shit (DO NOT TRY TO CREATE 2 GODS THERE CAN BE ONLY ONE)
-  while (!WindowShouldClose()) {
-    // UpdateMusicStream(music1);
-    ClearBackground((Color){34, 32, 52, 255});
-    bool mouseButton = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    Vector2 mouse = GetMousePosition();
-    cameraMover(&camera, &cameraDelta);
-    // cameraDelta = cameraPosition(&camera);
-    drawSceneGame(textures, map, mapWidth, mapHeight, camera, cameraDelta, selectedBlock, tileScaleFactor);
+    Texture2D hotbar = LoadTexture("./sprites/hotbar.png");
+    // Main game loop this is the GOD of this shit (DO NOT TRY TO CREATE 2 GODS THERE CAN BE ONLY ONE)
+    while (!WindowShouldClose()) {
+        SetWindowPosition(0,0);
+        // UpdateMusicStream(music1);
+        ClearBackground((Color){34, 32, 52, 255});
+        bool mouseButton = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+        Vector2 mouse = GetMousePosition();
+        cameraMover(&camera, &cameraDelta);
+        // cameraDelta = cameraPosition(&camera);
+        drawSceneGame(textures,player, map, mapWidth, mapHeight, camera, cameraDelta, selectedBlock, tileScaleFactor);
 
-    // If e key is pressed exit game
-    if(IsKeyPressed(KEY_E)){
-      free(textures);
-      CloseWindow();
+        // If e key is pressed exit game
+        if(IsKeyPressed(KEY_E)){
+            free(textures);
+            CloseWindow();
+        }
+
+        if (IsKeyPressed(KEY_SPACE)) {
+            FullscreenToggle(screenWidth, screenHeight); 
+        }
     }
 
-    if (IsKeyPressed(KEY_SPACE)) {
-      FullscreenToggle(screenWidth, screenHeight); 
-    }
-  }
-
-  // Free everything before exiting or succumb the the memory gods
-  free(textures);
-  free(map);
-  CloseWindow();
-  return 0;
+    // Free everything before exiting or succumb the the memory gods
+    free(textures);
+    free(map);
+    CloseWindow();
+    return 0;
 }

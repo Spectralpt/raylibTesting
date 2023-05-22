@@ -494,13 +494,14 @@ int main(void)
 
   // Screen dimentions these will most likely be changed in the future or maybe even set by the user in a menu or maybe even have the game with a
   // set window size but have it scale depending on the resolution
-  const int screenWidth = 800;
-  const int screenHeight = 450;
+  const int screenWidth = 1280;
+  const int screenHeight = 720;
 
   // Inition the random number generator
   srand(time(NULL));
 
   // Inition the screen and audio device, default Raylib requirements
+  SetConfigFlags(FLAG_FULLSCREEN_MODE);
   InitWindow(screenWidth, screenHeight, "My Test 3");
   InitAudioDevice();
 
