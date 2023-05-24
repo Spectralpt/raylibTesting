@@ -1,4 +1,4 @@
-// This is the first attempt at a more "working" version of what was created during testing
+// This is the first attempt at a more "working" version of what was created during testingate
 
 #include "raylib.h"
 #include "raymath.h"
@@ -144,20 +144,60 @@ bool polyPoint(Polygon polygon, Vector2 point) {
 }
 
 
+int GetDisplayWidth() {
+    if (IsWindowFullscreen()) {
+        int monitor = GetCurrentMonitor();
+        return GetMonitorWidth(monitor);
+    }
+    else {
+        return GetScreenWidth();
+    }
+}
+
+
+int GetDisplayHeight() {
+    if (IsWindowFullscreen()) {
+        int monitor = GetCurrentMonitor();
+        return GetMonitorHeight(monitor);
+    }
+    else {
+        return GetScreenHeight();
+    }
+}
+
+
+Texture2D playerBoard;
+Texture2D playerBoard2;
+Font boardFont;
 // This fucntion will be implemented in the future will be used to draw all the ui or at least call the correspondng fucntiond depending on the current screen
 void drawUi(void){
-    int width = GetScreenWidth();
-    int height = GetScreenHeight();
-    /* printf("width:%d  height:%d\n", width, height); */
+
+    int width = GetDisplayWidth();
+    int height = GetDisplayHeight();
+    /* printf("Width:%d;Height:%d\n", width,height); */
     Vector2 boxSize = {width,height};
-    /* printf("x:%f  y:%f\n", boxSize.x, boxSize.y); */
     float lenght = Vector2Length(boxSize);
     boxSize = Vector2Scale(boxSize, 400/lenght);
     
-    /* printf("x:%f  y:%f\n", boxSize.x, boxSize.y); */
+    Vector2 topLeft = {10 , -5 };
+    Vector2 bottomLeft = {0, height - 10 -playerBoard2.height * 2};
+    Rectangle bottomRight = {width - playerBoard2.width * 2,  height -10 -playerBoard2.height * 2,playerBoard2.width * 2,playerBoard2.height * 2};
+    Vector2 topRight = {width - playerBoard2.width * 2 -10 , -5};
+    Rectangle flippedTexture = {0,0,-playerBoard2.width,playerBoard2.height};
+
+    Vector2 zero = {0};
+    Vector2 text1Pos = {30,90};
+    Vector2 text2Pos = {30,125};
     Rectangle playerBox = {0,0,boxSize.x,boxSize.y};
-    DrawRectangleRec(playerBox, LIGHTGRAY);
-    DrawText("NiceCock", 0, 0, 20, GRAY);
+    DrawTextureEx(playerBoard, topLeft, 0, 2, WHITE);
+    DrawTextureEx(playerBoard2, bottomLeft, 0, 2, WHITE);
+    DrawTextureEx(playerBoard, topRight, 0, 2, WHITE);
+    DrawTexturePro(playerBoard2, flippedTexture, bottomRight, zero, 0, WHITE);
+    DrawTextEx(boardFont, "Player 1: Miguel", text1Pos, 30, 1, LIGHTGRAY);
+    DrawTextEx(boardFont, "Points: 1000", text2Pos, 30, 1, LIGHTGRAY);
+    
+    /* DrawText("Player 1", 30, 90, 20, BLACK); */
+    /* DrawText("Points: 100", 30 ,125, 20, BLACK); */
 }
 
 //Used to store position of currently selected block
@@ -208,59 +248,33 @@ bool MoveTo(Vector2* current, Vector2 target, float speed)
 }
 
 
-Vector2 endPosition;
-// This function will be used to draw all the game components going from map to players and UI elements
-void drawSceneGame(Texture2D *textures,Player *players, Tile **map, int mapWidth, int mapHeight, Camera2D camera, Vector2 cameraDelta, SpritePosition *selectedBlock, int tileScaleFactor){
-    int cubeWidth = textures[Grass].width;
-    int cubeHeight = textures[Grass].height;
-    BeginDrawing();
-    BeginMode2D(camera);
-    for (int mapX = 0; mapX < mapHeight; mapX++) {
-        for (int mapY = 0; mapY < mapWidth ; mapY++) {
-            int x = (mapX* 0.5 * cubeWidth + mapY * (-0.5) * cubeWidth - cubeWidth/2) * tileScaleFactor;
-            int y = (mapX* 0.25 * cubeWidth + mapY * 0.25 * cubeWidth) * tileScaleFactor;
+void findCameraPositions(int width, int height){
+    // Calculate the indices for the centers of each quadrant
+    int centerRowTL = width / 2;
+    int centerColumnTL = height / 2;
 
-            Vector2 spritePosition = {x,y};
-            Vector2 waterLevel = {0 + x,4 * tileScaleFactor + y};
+    int centerRowTR = width / 2;
+    int centerColumnTR = (height / 2) + (height % 2);
 
-            Polygon spritePolygon = createSpritePolygon(x, y, textures[Grass] ,tileScaleFactor);
-            Vector2 mousePositionCorrection = Vector2Add(GetMousePosition(), cameraDelta);
-            bool mouseColision = polyPoint(spritePolygon, mousePositionCorrection);
+    int centerRowBL = (width / 2) + (width % 2);
+    int centerColumnBL = height / 2;
 
-            /* TESTING */
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && mouseColision) {
-                endPosition.x = mapX;
-                endPosition.y = mapY;
-                players[0].moving = true;
-            }
-            if (players[0].moving == true) {
-                players[0].moving = MoveTo(&players[0].position, endPosition, 0.05);
-            }
-            drawPlayer(players[0], tileScaleFactor, cubeWidth);
-            /* TESTING */
+    int centerRowBR = (width / 2) + (width % 2);
+    int centerColumnBR = (height / 2) + (height % 2);
 
-            switch (map[mapY][mapX].type) {
-                case Grass:
-                    DrawTextureEx(textures[Grass], spritePosition, 0, tileScaleFactor, mouseColision ? LIGHTGRAY : WHITE );
-                    break;
-                case Water:
-                    DrawTextureEx(textures[Water], waterLevel, 0, tileScaleFactor, mouseColision ? LIGHTGRAY : WHITE );
-                    break;
-                case Sand:
-                    DrawTextureEx(textures[Sand], spritePosition, 0, tileScaleFactor, mouseColision ? LIGHTGRAY : WHITE );
-                    break;
-            }
-        }
-    }
+    /* // Access the elements at the calculated indices to obtain the centers of each quadrant */
+    /* int centerTL = array[centerRowTL][centerColumnTL]; */
+    /* int centerTR = array[centerRowTR][centerColumnTR]; */
+    /* int centerBL = array[centerRowBL][centerColumnBL]; */
+    /* int centerBR = array[centerRowBR][centerColumnBR]; */
 
-    EndMode2D();
-            drawUi();
-    EndDrawing();
 }
 
 
-void drawSceneEditor(){
-    // Code goes here xd
+// Moves the camera to the specified screen coordinates
+void cameraPlacer(Camera2D *camera, Vector2* position){
+    camera->target.x = position->x;
+    camera->target.y = position->y;
 }
 
 
@@ -287,6 +301,64 @@ void cameraMover(Camera2D *camera, Vector2 *mouse){
         mouse->y += cameraSpeed * deltaTime;
     }
 }
+
+
+Vector2 endPosition;
+// This function will be used to draw all the game components going from map to players and UI elements
+void drawSceneGame(Texture2D *textures,Player *players, Tile **map, int mapWidth, int mapHeight, Camera2D camera, Vector2 cameraDelta, SpritePosition *selectedBlock, int tileScaleFactor){
+    int cubeWidth = textures[Grass].width;
+    int cubeHeight = textures[Grass].height;
+    BeginDrawing();
+    BeginMode2D(camera);
+    for (int mapX = 0; mapX < mapHeight; mapX++) {
+        for (int mapY = 0; mapY < mapWidth ; mapY++) {
+            int x = (mapX* 0.5 * cubeWidth + mapY * (-0.5) * cubeWidth - cubeWidth/2) * tileScaleFactor;
+            int y = (mapX* 0.25 * cubeWidth + mapY * 0.25 * cubeWidth) * tileScaleFactor;
+
+            Vector2 spritePosition = {x,y};
+            Vector2 waterLevel = {0 + x,4 * tileScaleFactor + y};
+
+            Polygon spritePolygon = createSpritePolygon(x, y, textures[Grass] ,tileScaleFactor);
+            Vector2 mousePositionCorrection = Vector2Add(GetMousePosition(), cameraDelta);
+            bool mouseColision = polyPoint(spritePolygon, mousePositionCorrection);
+
+
+            switch (map[mapY][mapX].type) {
+                case Grass:
+                    DrawTextureEx(textures[Grass], spritePosition, 0, tileScaleFactor, mouseColision ? LIGHTGRAY : WHITE );
+                    break;
+                case Water:
+                    DrawTextureEx(textures[Water], waterLevel, 0, tileScaleFactor, mouseColision ? LIGHTGRAY : WHITE );
+                    break;
+                case Sand:
+                    DrawTextureEx(textures[Sand], spritePosition, 0, tileScaleFactor, mouseColision ? LIGHTGRAY : WHITE );
+                    break;
+            }
+            /* TESTING */
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && mouseColision) {
+                endPosition.x = mapX;
+                endPosition.y = mapY;
+                players[0].moving = true;
+            }
+            if (players[0].moving == true) {
+                players[0].moving = MoveTo(&players[0].position, endPosition, 0.01);
+            }
+            drawPlayer(players[0], tileScaleFactor, cubeWidth);
+            /* TESTING */
+        }
+    }
+
+    EndMode2D();
+            drawUi();
+    EndDrawing();
+}
+
+
+void drawSceneEditor(){
+    // Code goes here xd
+}
+
+
 
 
 Player* playerInit(int playerNumber){
@@ -411,7 +483,7 @@ Texture2D* textureLoader(){
 }
 
 
-void FullscreenToggle(int screenWidth, int screenHeight){
+void ToggleFullscreenWindow(int screenWidth, int screenHeight){
 
     if (!IsWindowFullscreen()) {
         int monitor = GetCurrentMonitor();
@@ -428,6 +500,7 @@ void FullscreenToggle(int screenWidth, int screenHeight){
 // The Goat the OG the one and only main function does whatever the fuck you want it to 
 int main(void)
 {
+
     // Screen dimentions these will most likely be changed in the future or maybe even set by the user in a menu or maybe even have the game with a
     // set window size but have it scale depending on the resolution
     const int screenWidth = 1920;
@@ -439,9 +512,12 @@ int main(void)
     srand(time(NULL));
 
     // init the screen and audio device, default Raylib requirements
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE || FLAG_FULLSCREEN_MODE);
     InitWindow(screenWidth, screenHeight, "attempt1");
     InitAudioDevice();
+    boardFont = LoadFont("./sprites/BLKCHCRY.TTF");
+    playerBoard = LoadTexture("./sprites/PlayerBoard2.png"); 
+    playerBoard2 = LoadTexture("./sprites/PlayerBoard3.png"); 
 
     // will try to fix the sounds (aka use music type) in the future for now they wont be used
     //  Sound music1 = LoadSound("./audio/music/Heartbeat+-+320bit.mp3");
@@ -453,7 +529,7 @@ int main(void)
     int framesCounter = 0;
 
     // map dimentions x, y, z
-    int mapWidth = 20, mapHeight = 20, mapDepth = 2;
+    int mapWidth = 40, mapHeight = 40, mapDepth = 2;
 
     // Loads the textures to this arrays using the textureLoader() func
     Texture2D *textures;// = (Texture2D*)malloc(3 * sizeof(Texture2D));
@@ -485,7 +561,7 @@ int main(void)
     Texture2D hotbar = LoadTexture("./sprites/hotbar.png");
     // Main game loop this is the GOD of this shit (DO NOT TRY TO CREATE 2 GODS THERE CAN BE ONLY ONE)
     while (!WindowShouldClose()) {
-        SetWindowPosition(0,0);
+        /* SetWindowPosition(0,0); */
         // UpdateMusicStream(music1);
         ClearBackground((Color){34, 32, 52, 255});
         bool mouseButton = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
@@ -501,7 +577,7 @@ int main(void)
         }
 
         if (IsKeyPressed(KEY_SPACE)) {
-            FullscreenToggle(screenWidth, screenHeight); 
+            ToggleFullscreenWindow(screenWidth, screenHeight); 
         }
     }
 
