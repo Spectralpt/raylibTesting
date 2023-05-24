@@ -8,6 +8,12 @@
 #include <string.h>
 
 
+// define a timer
+typedef struct{
+    float Lifetime;
+}Timer;
+
+
 typedef struct spritePosition{
     int x;
     int y;
@@ -31,6 +37,7 @@ typedef struct Player{
     int id;
     Texture2D texture;
     Vector2 position;
+    bool moving;
 } Player;
 
 
@@ -48,6 +55,33 @@ bool colorCompare(Color color1 , Color color2){
         return true;
     }
     return false;
+}
+
+
+// start or restart a timer with a specific lifetime
+void StartTimer(Timer* timer, float lifetime)
+{
+    if (timer != NULL)
+        timer->Lifetime = lifetime;
+}
+
+
+// update a timer with the current frame time
+void UpdateTimer(Timer* timer)
+{
+    // subtract this frame from the timer if it's not allready expired
+    if (timer != NULL && timer->Lifetime > 0)
+        timer->Lifetime -= GetFrameTime();
+}
+
+
+// check if a timer is done.
+bool TimerDone(Timer* timer)
+{
+    if (timer != NULL)
+        return timer->Lifetime <= 0;
+
+	return false;
 }
 
 
@@ -112,7 +146,18 @@ bool polyPoint(Polygon polygon, Vector2 point) {
 
 // This fucntion will be implemented in the future will be used to draw all the ui or at least call the correspondng fucntiond depending on the current screen
 void drawUi(void){
-    // Code goes here xd 
+    int width = GetScreenWidth();
+    int height = GetScreenHeight();
+    /* printf("width:%d  height:%d\n", width, height); */
+    Vector2 boxSize = {width,height};
+    /* printf("x:%f  y:%f\n", boxSize.x, boxSize.y); */
+    float lenght = Vector2Length(boxSize);
+    boxSize = Vector2Scale(boxSize, 400/lenght);
+    
+    /* printf("x:%f  y:%f\n", boxSize.x, boxSize.y); */
+    Rectangle playerBox = {0,0,boxSize.x,boxSize.y};
+    DrawRectangleRec(playerBox, LIGHTGRAY);
+    DrawText("NiceCock", 0, 0, 20, GRAY);
 }
 
 //Used to store position of currently selected block
@@ -127,32 +172,47 @@ void drawPlayer(Player player, int tileScaleFactor, int cubeWidth){
     int x = (player.position.x* 0.5 * cubeWidth + player.position.y * (-0.5) * cubeWidth - cubeWidth/2) * tileScaleFactor;
     int y = (player.position.x* 0.25 * cubeWidth + player.position.y * 0.25 * cubeWidth) * tileScaleFactor;
 
-    Vector2 playerScreenPos = {x, y - (player.texture.height/2 - 10) * tileScaleFactor};
+    Vector2 playerScreenPosition = {x, y - (player.texture.height/2 + 5) * tileScaleFactor};
 
-    DrawTextureEx(player.texture, playerScreenPos, 0, 2, WHITE);
+    DrawTextureEx(player.texture, playerScreenPosition, 0, 2, WHITE);
 }
 
 
-void playerPostionUpdate(Player player, Vector2 endPosition, int tileScaleFactor, int cubeWidth){
-    for (player.position.y;  player.position.y < endPosition.y; player.position.y++) {
-        for (player.position.x; player.position.x < endPosition.x; player.position.x++) {
-            drawPlayer(player, tileScaleFactor, cubeWidth);
-        }
+Vector2 isometricConversion(Vector2 vector, int tileScaleFactor, int cubeWidth){
+    int x = (vector.x * 0.5 + vector.y * (-0.5)) * tileScaleFactor;
+    int y = (vector.x * 0.25 + vector.y * 0.25 * cubeWidth) * tileScaleFactor;
+
+    Vector2 vectorIsometric = {x,y};
+   return vectorIsometric; 
+}
+
+
+// code made by blizzard engineer by far the best pice of code her
+bool MoveTo(Vector2* current, Vector2 target, float speed)
+{
+    float moveLen = speed * GetFrameTime();
+
+    Vector2 delta = Vector2Subtract(target, *current);
+    float lenght = Vector2Length(delta);
+
+    if (lenght < moveLen)
+    {
+        *current = target;
+        return false;
     }
+
+    delta = Vector2Scale(delta, moveLen / lenght);
+
+    *current = Vector2Add(*current, delta);
+    return true;
 }
 
 
+Vector2 endPosition;
 // This function will be used to draw all the game components going from map to players and UI elements
-void drawSceneGame(Texture2D *textures,Texture2D player, Tile **map, int mapWidth, int mapHeight, Camera2D camera, Vector2 cameraDelta, SpritePosition *selectedBlock, int tileScaleFactor){
+void drawSceneGame(Texture2D *textures,Player *players, Tile **map, int mapWidth, int mapHeight, Camera2D camera, Vector2 cameraDelta, SpritePosition *selectedBlock, int tileScaleFactor){
     int cubeWidth = textures[Grass].width;
     int cubeHeight = textures[Grass].height;
-    //TESTING
-    Player player1;
-    player1.id = 1;
-    player1.position.x = -1;
-    player1.position.y = -1;
-    player1.texture = player;
-    //TESTING
     BeginDrawing();
     BeginMode2D(camera);
     for (int mapX = 0; mapX < mapHeight; mapX++) {
@@ -167,7 +227,17 @@ void drawSceneGame(Texture2D *textures,Texture2D player, Tile **map, int mapWidt
             Vector2 mousePositionCorrection = Vector2Add(GetMousePosition(), cameraDelta);
             bool mouseColision = polyPoint(spritePolygon, mousePositionCorrection);
 
-                drawPlayer(player1, tileScaleFactor, cubeWidth);
+            /* TESTING */
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && mouseColision) {
+                endPosition.x = mapX;
+                endPosition.y = mapY;
+                players[0].moving = true;
+            }
+            if (players[0].moving == true) {
+                players[0].moving = MoveTo(&players[0].position, endPosition, 0.05);
+            }
+            drawPlayer(players[0], tileScaleFactor, cubeWidth);
+            /* TESTING */
 
             switch (map[mapY][mapX].type) {
                 case Grass:
@@ -184,6 +254,7 @@ void drawSceneGame(Texture2D *textures,Texture2D player, Tile **map, int mapWidt
     }
 
     EndMode2D();
+            drawUi();
     EndDrawing();
 }
 
@@ -215,6 +286,18 @@ void cameraMover(Camera2D *camera, Vector2 *mouse){
         camera->target.y += cameraSpeed * deltaTime;
         mouse->y += cameraSpeed * deltaTime;
     }
+}
+
+
+Player* playerInit(int playerNumber){
+    Player *players = (Player*)malloc(playerNumber*sizeof(Player));
+    for (int i = 0; i < playerNumber; i++) {
+        players[i].position.x = 0;
+        players[i].position.y = 0;
+        players[i].id = i;
+        players[i].moving = false;
+    }
+    return players;
 }
 
 
@@ -308,10 +391,6 @@ Texture2D* textureLoader(){
     int numLines = 4;
     char characterInFile;
 
-    //  for (characterInFile = getc(texturesFile); characterInFile != EOF; characterInFile = getc(texturesFile))
-    //      if (characterInFile == '\n') 
-    //          numLines = numLines + 1;
-
     texturesFile =  fopen("sprites/textures.txt", "r");
     if (texturesFile == NULL) {
         printf("Get Fucked");
@@ -323,7 +402,6 @@ Texture2D* textureLoader(){
     for(int i = 0; i < numLines; i++){
         fgets(line, 50, texturesFile);
         line[strcspn(line, "\r\n")] = 0; // Remove newline characters
-        printf("%s\n\n\n\n", line);
         textures[i] = LoadTexture(line); // Load texture from line
     }
 
@@ -370,7 +448,7 @@ int main(void)
     //  Sound music2 = LoadSound("./audio/music/Celtic+Ambiance+-+320bit.mp3");
 
     // Make game run at an expected 60 fps
-    SetTargetFPS(60);
+    SetTargetFPS(144);
     // frame counter may be usefull in the future might aswell define it now
     int framesCounter = 0;
 
@@ -380,11 +458,13 @@ int main(void)
     // Loads the textures to this arrays using the textureLoader() func
     Texture2D *textures;// = (Texture2D*)malloc(3 * sizeof(Texture2D));
     textures = textureLoader();
-    Texture2D player;
-    player = LoadTexture("./sprites/GOOSESPRITE.png");
 
     // Map declaration
     Tile **map = generateMap(mapWidth, mapHeight);
+
+    //
+    Player *players = playerInit(1);
+    players[0].texture = LoadTexture("./sprites/GOOSESPRITE.png");
 
     // Camera declaration this should be moved to its own function for the sake of clarity
     Camera2D camera;
@@ -412,7 +492,7 @@ int main(void)
         Vector2 mouse = GetMousePosition();
         cameraMover(&camera, &cameraDelta);
         // cameraDelta = cameraPosition(&camera);
-        drawSceneGame(textures,player, map, mapWidth, mapHeight, camera, cameraDelta, selectedBlock, tileScaleFactor);
+        drawSceneGame(textures, players ,map, mapWidth, mapHeight, camera, cameraDelta, selectedBlock, tileScaleFactor);
 
         // If e key is pressed exit game
         if(IsKeyPressed(KEY_E)){
@@ -431,3 +511,4 @@ int main(void)
     CloseWindow();
     return 0;
 }
+
