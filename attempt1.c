@@ -48,6 +48,14 @@ typedef enum{
     Sand = 3,
 }Sprite;
 
+
+typedef enum{
+    topRight = 1,
+    topLeft = 2,
+    bottomRight = 3,
+    bottomLeft = 4,
+}Quadrant;
+
 //Color compare fucntion used to compare the color type inside raylib
 bool colorCompare(Color color1 , Color color2){
     bool sameColor = false;
@@ -227,7 +235,7 @@ Vector2 isometricConversion(Vector2 vector, int tileScaleFactor, int cubeWidth){
 }
 
 
-// code made by blizzard engineer by far the best pice of code her
+// code made by blizzard engineer by far the best pice of code here
 bool MoveTo(Vector2* current, Vector2 target, float speed)
 {
     float moveLen = speed * GetFrameTime();
@@ -248,19 +256,32 @@ bool MoveTo(Vector2* current, Vector2 target, float speed)
 }
 
 
-void findCameraPositions(int width, int height){
+Vector2 cameraQuadrantCenters(int width, int height,Tile **map, int quadrant){
     // Calculate the indices for the centers of each quadrant
-    int centerRowTL = width / 2;
-    int centerColumnTL = height / 2;
+    int centerColumn;
+    int centerRow;
 
-    int centerRowTR = width / 2;
-    int centerColumnTR = (height / 2) + (height % 2);
+    Vector2 cameraPositions;
+    if (quadrant == topLeft) {
+        centerColumn = height / 4;
+        centerRow = width / 4;
+    }
+    if (quadrant == topRight) {
+        centerRow = (3 * width) / 4;
+        centerColumn = (height / 4);
+    }
+    if (quadrant == bottomLeft) {
+        centerRow = (width / 4);
+        centerColumn = (3 * height) / 4;
+    }
+    if (quadrant == bottomRight) {
+        centerRow = (3 * width) / 4;
+        centerColumn = (3 * height)/ 4; 
+    }
 
-    int centerRowBL = (width / 2) + (width % 2);
-    int centerColumnBL = height / 2;
-
-    int centerRowBR = (width / 2) + (width % 2);
-    int centerColumnBR = (height / 2) + (height % 2);
+  Vector2 quadrantPosition = {map[centerRow][centerColumn].x,map[centerRow][centerColumn].y};
+    
+  return quadrantPosition;
 
     /* // Access the elements at the calculated indices to obtain the centers of each quadrant */
     /* int centerTL = array[centerRowTL][centerColumnTL]; */
@@ -272,44 +293,47 @@ void findCameraPositions(int width, int height){
 
 
 // Moves the camera to the specified screen coordinates
-void cameraPlacer(Camera2D *camera, Vector2* position){
-    camera->target.x = position->x;
-    camera->target.y = position->y;
+void cameraPlacer(Camera2D *camera, Vector2 position, Vector2 *cameraDelta){
+    Vector2 moveDistance = Vector2Subtract(position, camera->target);
+    
+    camera->target = position;
+    cameraDelta->x += moveDistance.x;
+    cameraDelta->y += moveDistance.y;
 }
 
 
 // Moves the camera and give the delta for the camera position used to keep the mouse position true to the world coordinates
-void cameraMover(Camera2D *camera, Vector2 *mouse){
+void cameraMover(Camera2D *camera, Vector2 *cameraDelta){
 
     float deltaTime = GetFrameTime();
     float cameraSpeed = 200;
 
     if (IsKeyDown(KEY_A)) {
         camera->target.x -= cameraSpeed * deltaTime;
-        mouse->x -= cameraSpeed * deltaTime;
+        cameraDelta->x -= cameraSpeed * deltaTime;
     }
     if (IsKeyDown(KEY_D)) {
         camera->target.x += cameraSpeed * deltaTime;
-        mouse->x += cameraSpeed * deltaTime;
+        cameraDelta->x += cameraSpeed * deltaTime;
     }
     if (IsKeyDown(KEY_W)) {
         camera->target.y -= cameraSpeed * deltaTime;
-        mouse->y -= cameraSpeed * deltaTime;
+        cameraDelta->y -= cameraSpeed * deltaTime;
     }
     if (IsKeyDown(KEY_S)) {
         camera->target.y += cameraSpeed * deltaTime;
-        mouse->y += cameraSpeed * deltaTime;
+        cameraDelta->y += cameraSpeed * deltaTime;
     }
 }
 
 
 Vector2 endPosition;
 // This function will be used to draw all the game components going from map to players and UI elements
-void drawSceneGame(Texture2D *textures,Player *players, Tile **map, int mapWidth, int mapHeight, Camera2D camera, Vector2 cameraDelta, SpritePosition *selectedBlock, int tileScaleFactor){
+void drawSceneGame(Texture2D *textures,Player *players, Tile **map, int mapWidth, int mapHeight, Camera2D *camera, Vector2 *cameraDelta, SpritePosition *selectedBlock, int tileScaleFactor){
     int cubeWidth = textures[Grass].width;
     int cubeHeight = textures[Grass].height;
     BeginDrawing();
-    BeginMode2D(camera);
+    BeginMode2D(*camera);
     for (int mapX = 0; mapX < mapHeight; mapX++) {
         for (int mapY = 0; mapY < mapWidth ; mapY++) {
             int x = (mapX* 0.5 * cubeWidth + mapY * (-0.5) * cubeWidth - cubeWidth/2) * tileScaleFactor;
@@ -319,7 +343,7 @@ void drawSceneGame(Texture2D *textures,Player *players, Tile **map, int mapWidth
             Vector2 waterLevel = {0 + x,4 * tileScaleFactor + y};
 
             Polygon spritePolygon = createSpritePolygon(x, y, textures[Grass] ,tileScaleFactor);
-            Vector2 mousePositionCorrection = Vector2Add(GetMousePosition(), cameraDelta);
+            Vector2 mousePositionCorrection = Vector2Add(GetMousePosition(), *cameraDelta);
             bool mouseColision = polyPoint(spritePolygon, mousePositionCorrection);
 
 
@@ -344,6 +368,32 @@ void drawSceneGame(Texture2D *textures,Player *players, Tile **map, int mapWidth
                 players[0].moving = MoveTo(&players[0].position, endPosition, 0.01);
             }
             drawPlayer(players[0], tileScaleFactor, cubeWidth);
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+                Vector2 test = {320,320};
+                cameraPlacer(camera, test, cameraDelta);
+            }
+
+            /* if (IsKeyPressed(KEY_ONE)) { */
+            /*     Vector2 cameraPostion = cameraQuadrantCenters(mapWidth, mapHeight, map, topRight); */
+            /*     cameraPostion = isometricConversion(cameraPostion, tileScaleFactor, cubeWidth); */
+            /*     cameraPlacer(camera, cameraPostion, cameraDelta); */
+            /* } */
+            /* if (IsKeyPressed(KEY_TWO)) { */
+            /*     Vector2 cameraPostion = cameraQuadrantCenters(mapWidth, mapHeight, map, topLeft); */
+            /*     cameraPostion = isometricConversion(cameraPostion, tileScaleFactor, cubeWidth); */
+            /*     cameraPlacer(camera, cameraPostion, cameraDelta); */
+            /* } */
+            /* if (IsKeyPressed(KEY_THREE)) { */
+            /*     Vector2 cameraPostion = cameraQuadrantCenters(mapWidth, mapHeight, map, bottomRight); */
+            /*     cameraPostion = isometricConversion(cameraPostion, tileScaleFactor, cubeWidth); */
+            /*     cameraPlacer(camera, cameraPostion, cameraDelta); */
+            /* } */
+            /* if (IsKeyPressed(KEY_FOUR)) { */
+            /*     Vector2 cameraPostion = cameraQuadrantCenters(mapWidth, mapHeight, map, bottomLeft); */
+            /*     cameraPostion = isometricConversion(cameraPostion, tileScaleFactor, cubeWidth); */
+            /*     cameraPlacer(camera, cameraPostion, cameraDelta); */
+            /* } */
             /* TESTING */
         }
     }
@@ -544,12 +594,14 @@ int main(void)
 
     // Camera declaration this should be moved to its own function for the sake of clarity
     Camera2D camera;
-    Vector2 position = {0,0};
+    Vector2 position = {screenWidth/2,screenHeight/2};
     camera.zoom = 1.0f;
     camera.offset = position;
     camera.rotation = 0;
-    camera.target = position;
-    Vector2 cameraDelta = {0 ,0};
+    /* camera.target = position; */
+    camera.target.x = 0;
+    camera.target.y = mapHeight * 32 /2 ;
+    Vector2 cameraDelta = {-screenWidth/2 , 96};
 
 
     // This is for music pausing i still need to figure that one out
@@ -568,7 +620,7 @@ int main(void)
         Vector2 mouse = GetMousePosition();
         cameraMover(&camera, &cameraDelta);
         // cameraDelta = cameraPosition(&camera);
-        drawSceneGame(textures, players ,map, mapWidth, mapHeight, camera, cameraDelta, selectedBlock, tileScaleFactor);
+        drawSceneGame(textures, players ,map, mapWidth, mapHeight, &camera, &cameraDelta, selectedBlock, tileScaleFactor);
 
         // If e key is pressed exit game
         if(IsKeyPressed(KEY_E)){
